@@ -18,3 +18,9 @@ const MY_CHARACTER_IMAGE = "images/character.gif";
 
 // キャラクターの表示の高さ（ピクセル）。幅は画像の形に合わせて自動で決まります。
 const MY_CHARACTER_HEIGHT = 72;
+
+// クーポンの有効時間（分）。来店チェックインしてから、この時間だけクーポンが表示されます。
+const COUPON_VALID_MIN = 15;
+
+// すべてのクーポンに表示する共通の条件
+const COUPON_RULE = "お一人様1回・1会計につき1回限り";

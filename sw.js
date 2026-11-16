@@ -1,6 +1,6 @@
 // アプリ本体をスマホに保存して、電波が弱くても開けるようにする仕組み。
 // ファイルを更新したら、下の VERSION の数字を1つ増やしてください。
-const VERSION = "v7";
+const VERSION = "v8";
 const FILES = ["./", "index.html", "style.css", "app.js", "spots.csv", "sponsors.csv", "config.js", "sponsors.js", "homecheck.js", "privacy.html", "data/shelters.json", "data/volcano.json", "manifest.webmanifest", "icons/icon-192.png", "images/character.gif", ...["peek","sleep","surprise","question","banzai","sad","stand","power","run","plug-on","eat","sit"].map(n => `images/poses/${n}.png`)];
 
 self.addEventListener("install", e => {

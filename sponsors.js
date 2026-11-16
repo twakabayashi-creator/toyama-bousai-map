@@ -104,6 +104,28 @@ function canCheckInSponsor(p) {
 }
 const fmtTime = ts => { const d = new Date(ts); return `${d.getMonth() + 1}月${d.getDate()}日 ${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`; };
 
+// クーポンの残り時間（ミリ秒）。チェックインした時刻から COUPON_VALID_MIN 分
+function couponLeft(p) {
+  const t = (state.cpt && state.cpt[p.id]) || 0;
+  return t + COUPON_VALID_MIN * 60000 - Date.now();
+}
+// クーポンの時計を1秒ごとに動かす。有効時間が過ぎたら画面を切りかえる
+let couponTimer = null;
+function startCouponClock(p) {
+  clearInterval(couponTimer);
+  const tick = () => {
+    const clock = $("cpclock");
+    if (!clock || currentSponsor !== p.id) { clearInterval(couponTimer); return; }
+    const now = new Date(), left = couponLeft(p);
+    if (left <= 0) { clearInterval(couponTimer); openSponsor(p.id, true); return; }
+    const z = n => String(n).padStart(2, "0");
+    $("cpdate").textContent = `${now.getMonth() + 1}月${now.getDate()}日`;
+    clock.textContent = `${z(now.getHours())}:${z(now.getMinutes())}:${z(now.getSeconds())}`;
+    $("cpleft").textContent = `${Math.floor(left / 60000)}分${z(Math.floor(left / 1000) % 60)}秒`;
+  };
+  if ($("cpclock")) { tick(); couponTimer = setInterval(tick, 1000); }
+}
+
 function couponBox(p) {
   if (!p.coupon) {
     if (state.sp[p.id]) return `<div class="box checkin clear"><b class="t">来店チェックイン済み +50pt</b></div>`;
@@ -111,14 +133,21 @@ function couponBox(p) {
     return "";
   }
   if (state.coupon[p.id]) return `<div class="coupon used"><b>クーポン使用済み</b><span>${p.coupon}</span><span class="note">${fmtTime(state.coupon[p.id])} に使用しました</span></div>`;
-  if (state.sp[p.id]) return `<div class="coupon">
+  if (state.sp[p.id] && couponLeft(p) > 0) return `<div class="coupon live">
       <span class="ctag">クーポン</span>
       <b class="cbig">${p.coupon}</b>
-      ${p.terms ? `<span class="note">条件：${p.terms}</span>` : ""}
-      <span>この画面をお店の人に見せてください。</span>
-      <span class="note">来店チェックイン：${fmtTime(state.sp[p.id])}</span>
+      <span class="note">${esc(COUPON_RULE)}${p.terms ? `<br>${p.terms}` : ""}</span>
+      <div class="cclock"><span id="cpdate"></span><b id="cpclock"></b></div>
+      <div class="cstripe" aria-hidden="true"></div>
+      <span>この画面をお店の人に見せてください。<br><small>時計が動いていない画面（スクリーンショット）は使えません。</small></span>
+      <span class="cleft">有効時間 のこり <b id="cpleft"></b></span>
       <div id="usebox"><button class="btn ghost" id="use1">【お店の人が押す】使用済みにする</button></div>
     </div>`;
+  if (state.sp[p.id]) {
+    // 有効時間が過ぎた：お店の近くにいれば、もう一度チェックインして表示できる
+    if (canCheckInSponsor(p)) return `<div class="box checkin"><b class="t">クーポンの有効時間（${COUPON_VALID_MIN}分）が過ぎました</b><span>お店にいるときは、もう一度チェックインするとクーポンを表示できます。</span><div><button class="btn gold" id="spci">もう一度チェックインしてクーポンを表示</button></div></div>`;
+    return `<div class="box checkin"><b class="t">クーポン：${p.coupon}</b><span>クーポンの有効時間（${COUPON_VALID_MIN}分）が過ぎました。お店で、もう一度来店チェックインすると表示できます。</span>${me ? "" : '<div><button class="btn gold" id="gpson2">📍 現在地をオンにする</button></div>'}</div>`;
+  }
   if (!me) return `<div class="box checkin"><b class="t">クーポン：${p.coupon}</b><span>お店から${SPONSOR_RADIUS_M}m以内で「来店チェックイン」すると、クーポンが使えます（+50pt）。</span><div><button class="btn gold" id="gpson2">📍 現在地をオンにする</button></div></div>`;
   if (canCheckInSponsor(p)) return `<div class="box checkin"><b class="t">お店に着きました！</b><span>チェックインすると、クーポン「${p.coupon}」が表示されます。</span><div><button class="btn gold" id="spci">来店チェックインしてクーポンを表示（+50pt）</button></div></div>`;
   return `<div class="box checkin"><b class="t">クーポン：${p.coupon}</b><span>ここから約${fmt(km(me.lat, me.lng, p.lat, p.lng))}。お店から${SPONSOR_RADIUS_M}m以内に近づくと、来店チェックインできます。</span></div>`;
@@ -143,7 +172,12 @@ function openSponsor(id, keepView) {
   $("back").onclick = home;
   const g = $("gpson2"); if (g) g.onclick = () => $("gpsbtn").click();
   const l = $("splink"); if (l) l.onclick = () => track("link", id);
-  const ci = $("spci"); if (ci) ci.onclick = () => { state.sp[id] = Date.now(); save(); track("checkin", id); openSponsor(id, true); };
+  const ci = $("spci"); if (ci) ci.onclick = () => {
+    state.cpt = state.cpt || {};
+    if (!state.sp[id]) { state.sp[id] = Date.now(); track("checkin", id); }
+    state.cpt[id] = Date.now(); save(); openSponsor(id, true);
+  };
+  startCouponClock(p);
   const u = $("use1"); if (u) u.onclick = () => {
     $("usebox").innerHTML = `<span class="note">一度使用済みにすると、元に戻せません。</span><div class="btnrow"><button class="btn" id="use2">使用済みにする</button><button class="btn ghost" id="use0">やめる</button></div>`;
     $("use2").onclick = () => { state.coupon[id] = Date.now(); save(); track("coupon", id); openSponsor(id, true); };

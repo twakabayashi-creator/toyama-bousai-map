@@ -171,3 +171,15 @@ a.btn{display:inline-block;text-decoration:none}
 .home-cta{border-color:var(--shelter)}
 .box .hrow .hk{flex-basis:100%}
 .box .hrow > span:nth-child(2){flex:1;min-width:0}
+
+/* ---------- クーポン（スクリーンショット対策） ---------- */
+.cclock{display:flex;flex-direction:column;align-items:center;font-variant-numeric:tabular-nums;line-height:1.2}
+.cclock span{font-size:13px;color:var(--muted)}
+.cclock b{font-family:var(--display);font-weight:400;font-size:34px;letter-spacing:.04em;color:var(--pr)}
+.cstripe{width:100%;height:12px;border-radius:99px;background:repeating-linear-gradient(-45deg,var(--pr) 0 10px,var(--gold) 10px 20px);background-size:28px 28px;animation:cstripe 1s linear infinite}
+@keyframes cstripe{to{background-position:28px 0}}
+.coupon.live{animation:cpulse 2s ease-in-out infinite}
+@keyframes cpulse{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--pr) 18%,transparent)}}
+.cleft{font-size:14px}.cleft b{color:var(--ng);font-variant-numeric:tabular-nums}
+.coupon small{color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.cstripe,.coupon.live{animation:none}}
