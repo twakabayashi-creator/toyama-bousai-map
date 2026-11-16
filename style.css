@@ -129,3 +129,25 @@ a.btn{display:inline-block;text-decoration:none}
 
 /* 自分の位置のキャラクター画像に影をつける */
 .mechar{filter:drop-shadow(0 2px 3px rgb(0 0 0 / .35))}
+
+/* ---------- 案内役のクマ ---------- */
+.guide{display:flex;gap:10px;align-items:flex-end}
+.guide img{width:72px;height:auto;flex:none}
+.guide .say{position:relative;flex:1;min-width:0;background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:10px 14px;line-height:1.6}
+.guide .say::before{content:"";position:absolute;left:-9px;bottom:16px;width:14px;height:14px;background:inherit;border-left:2px solid var(--line);border-bottom:2px solid var(--line);transform:rotate(45deg)}
+.guide.q .say{font-weight:900;font-size:17px}
+.guide.ok .say{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 10%,var(--surface))}
+.guide.ok .say b{color:var(--ok)}
+.guide.ng .say{border-color:var(--ng);color:var(--ng);font-weight:700;background:color-mix(in srgb,var(--ng) 8%,var(--surface))}
+.guide.small img{width:56px}
+.guide.small .say{font-size:14px;padding:8px 12px}
+.learn::after{content:"";display:block;clear:both}
+.learnpose{float:right;width:72px;height:auto;margin:0 0 4px 10px}
+.gpsbear{width:48px;height:auto}
+.popguide img{float:left;width:40px;height:auto;margin:0 8px 2px 0}
+.popguide::after{content:"";display:block;clear:both}
+#toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translate(-50%,140%);z-index:3000;width:min(420px,calc(100% - 32px));transition:transform .35s ease;cursor:pointer}
+#toast.show{transform:translate(-50%,0)}
+#toast .say{box-shadow:0 6px 20px rgb(0 0 0 / .2);font-weight:700}
+#toast img{width:84px;filter:drop-shadow(0 4px 8px rgb(0 0 0 / .25))}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}

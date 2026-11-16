@@ -68,11 +68,34 @@ function buildSpots(rows) {
       id, no: out.length + 1, name: esc(name), title: name, place: esc(get(r, "場所")), lat, lng, hzName: esc(get(r, "災害の種類") || "防災"),
       mission: MISSION_WORD(get(r, "ミッション")),
       learn: ["説明1", "説明2", "説明3"].map(n => esc(get(r, n))).filter(Boolean),
+      pose: /^[a-z\-]+$/.test(get(r, "キャラクター")) ? get(r, "キャラクター") : "",
       q: esc(get(r, "問題")), a: c.indexOf(get(r, "正解")), c: c.map(esc), why: esc(get(r, "解説"))
     });
   });
   return out;
 }
+// ---------- 案内役のクマ ----------
+// pose：images/poses/ の画像名（拡張子なし）、text：セリフ、cls：吹き出しにつける追加の見た目
+const POSE = name => `images/poses/${name}.png`;
+const guide = (pose, text, cls = "") => `<div class="guide ${cls}"><img src="${POSE(pose)}" alt="" width="72" height="80"><div class="say">${text}</div></div>`;
+let toastTimer = null;
+function toast(pose, text) {
+  let el = document.getElementById("toast");
+  if (!el) { el = document.createElement("div"); el.id = "toast"; el.setAttribute("role", "status"); document.body.appendChild(el); }
+  el.innerHTML = guide(pose, text);
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 4000);
+  el.onclick = () => el.classList.remove("show");
+}
+// 称号が上がったら力こぶのクマでお知らせ
+function checkRankUp() {
+  const idx = RANKS.filter(r => total() >= r[0]).length - 1;
+  if (state.rankIdx === undefined) { state.rankIdx = idx; save(); return; }
+  if (idx > state.rankIdx) { state.rankIdx = idx; save(); toast("power", `称号アップ！<b>「${RANKS[idx][1]}」</b>になったよ！`); }
+  else if (idx < state.rankIdx) { state.rankIdx = idx; save(); }
+}
+
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
 
 // ---------- 保存（この端末の中だけ） ----------
@@ -158,13 +181,13 @@ function shelterClick(sh) {
     const ok = SHELTERS.filter(x => x.m & bit).map(x => ({ x, d: km(s.lat, s.lng, x.lat, x.lng) })).sort((a, b) => a.d - b.d);
     const rank = ok.findIndex(o => o.x === sh);
     if (!(sh.m & bit)) {
-      html += `<div class="verdict ng">ここは「${label}」のときには使えない避難場所です。避難場所は、災害の種類ごとに決められています。</div>`;
+      html += `<div class="verdict ng popguide"><img src="${POSE("surprise")}" alt="">ここは「${label}」のときには使えない避難場所だよ！避難場所は、災害の種類ごとに決められています。</div>`;
     } else if (rank > -1 && (rank < 5 || d <= ok[0].d + 1)) {
-      html += `<div class="verdict ok">ミッション成功！ ${label}のときに使える避難場所です（${s.name}から約${fmt(d)}）。+50pt</div>`;
+      html += `<div class="verdict ok popguide"><img src="${POSE("banzai")}" alt="">ミッション成功！ ${label}のときに使える避難場所です（${s.name}から約${fmt(d)}）。+50pt</div>`;
       if (!state.mission[s.id]) { state.mission[s.id] = true; save(); }
       endMission(); openSpot(s.id, true);
     } else {
-      html += `<div class="verdict mid">${label}のときに使えます。でも、もっと近い避難場所があるよ（約${fmt(d)}）。</div>`;
+      html += `<div class="verdict mid popguide"><img src="${POSE("question")}" alt="">${label}のときに使えます。でも、もっと近い避難場所があるよ（約${fmt(d)}）。</div>`;
     }
   }
   L.popup({ maxWidth: 260 }).setLatLng([sh.lat, sh.lng]).setContent(html).openOn(map);
@@ -207,6 +230,7 @@ function onPos(p) {
     meCircle = L.circle([me.lat, me.lng], { radius: me.acc, color: "#1a73e8", weight: 1, fillOpacity: .1 }).addTo(map);
     meMarker = L.marker([me.lat, me.lng], { icon: meIcon(), zIndexOffset: 2000, title: "いまいる場所" }).addTo(map);
   } else { meMarker.setLatLng([me.lat, me.lng]); meCircle.setLatLng([me.lat, me.lng]).setRadius(me.acc); }
+  if (firstFix) { toast("plug-on", "現在地オン！近くの防災ポイントをさがしてみよう。"); }
   if (firstFix) { firstFix = false; map.flyTo([me.lat, me.lng], Math.max(map.getZoom(), 14), { duration: .8 }); }
   $("nearbtn").hidden = false;
   const n = nearestSpot();
@@ -237,6 +261,7 @@ function showNearby(bit) {
   const list = SHELTERS.filter(s => !bit || (s.m & bit)).map(s => ({ s, d: km(me.lat, me.lng, s.lat, s.lng) })).sort((a, b) => a.d - b.d).slice(0, 5);
   const tabs = [[0, "すべて"], [1, "洪水"], [16, "津波"], [8, "地震"], [2, "崖崩れ"]];
   $("panel").innerHTML = `<span class="tag">いまいる場所から</span><h2>近くの避難場所</h2>
+    ${guide("run", "いざというとき、どこへ逃げるか確かめておこう！")}
     <div class="btnrow">${tabs.map(([b, t]) => `<button class="btn ${b === bit ? "green" : "ghost"}" data-b="${b}">${t}</button>`).join("")}</div>
     <div class="box">${list.length ? list.map((o, i) => `<div><b>${i + 1}. ${o.s.name}</b>（約${fmt(o.d)}）<br>${badges(o.s.m)} <button class="btn ghost" style="padding:2px 10px;font-size:12px" data-i="${i}">地図で見る</button></div>`).join("") : "見つかりませんでした。"}</div>
     <p class="note">距離はまっすぐ測った距離です。実際に歩く道のりは、もっと長くなります。避難場所は災害の種類ごとに違うので、家族で確かめておきましょう。</p>
@@ -266,6 +291,7 @@ let current = null;
 function rerender() { if (currentSponsor) openSponsor(currentSponsor, true); else if (current) openSpot(current, true); else refresh(0); }
 
 function refresh(sel) {
+  checkRankUp();
   const p = total(), n = Object.keys(state.done).length;
   $("pt").textContent = p;
   $("st").textContent = `${n} / ${SPOTS.length}`;
@@ -285,7 +311,7 @@ function refresh(sel) {
 function home() {
   current = null; currentSponsor = null; refresh(0);
   const p = total(), next = RANKS.find(r => r[0] > p);
-  $("panel").innerHTML = `${csvWarning()}<div class="intro"><span class="tag">あそびかた</span>
+  $("panel").innerHTML = `${csvWarning()}${guide("peek", "いっしょに防災ポイントをめぐろう！")}<div class="intro"><span class="tag">あそびかた</span>
     <ol><li>地図の番号をタップして、防災ポイントを開こう</li><li>説明を読んでクイズに答えると、スタンプがもらえるよ</li><li>ミッションで、近くの避難場所を地図からさがそう</li><li>実際にその場所へ行って「現地チェックイン」すると、金のスタンプと +100pt！</li></ol></div>
     <div><span class="tag">いまの称号</span><p class="rank">${rankOf(p)}</p><p class="note">${next ? `あと ${next[0] - p}pt で「${next[1]}」` : "すべての称号を手に入れました！"}</p></div>
     <div><span class="tag">スタンプ帳（金色＝現地、緑の丸＝ミッション）</span><div class="stamps">${SPOTS.map(s => `<button class="stamp ${state.done[s.id] ? "got" : ""} ${state.here[s.id] ? "here" : ""}" data-id="${s.id}" aria-label="${s.name}">${state.done[s.id] || state.here[s.id] ? s.name.replace(/・.*|の.*/, "") : s.no}${state.mission[s.id] ? '<i class="m"></i>' : ""}</button>`).join("")}</div></div>
@@ -301,9 +327,9 @@ function home() {
 
 function checkinBox(s) {
   if (state.here[s.id]) return `<div class="box checkin clear"><b class="t">現地チェックイン済み +100pt</b><span>実際に来て、自分の目で確かめました。まわりの地形や、避難場所までの道も見ておこう。</span></div>`;
-  if (!me) return `<div class="box checkin"><b class="t">現地チェックイン +100pt</b><span>この場所に実際に行くと、金のスタンプがもらえます。</span><div><button class="btn gold" id="gpson">📍 現在地をオンにする</button></div></div>`;
+  if (!me) return `<div class="box checkin"><b class="t">現地チェックイン +100pt</b>${guide("sleep", "現在地がオフだと眠っちゃう…。この場所に実際に行くと、金のスタンプがもらえるよ。", "small")}<div><button class="btn gold" id="gpson">📍 現在地をオンにする</button></div></div>`;
   const d = km(me.lat, me.lng, s.lat, s.lng);
-  if (canCheckIn(s)) return `<div class="box checkin"><b class="t">現地に着きました！</b><div><button class="btn gold" id="doci">現地チェックインする</button></div></div>`;
+  if (canCheckIn(s)) return `<div class="box checkin">${guide("surprise", "着いたよ！チェックインしよう！", "small")}<div><button class="btn gold" id="doci">現地チェックインする</button></div></div>`;
   return `<div class="box checkin"><b class="t">現地チェックイン +100pt</b><span>ここから約${fmt(d)}。ポイントから${CHECKIN_RADIUS_M}m以内に近づくとチェックインできます。</span><span class="note">移動するときは、まわりの安全に気をつけて。歩きスマホはやめよう。</span></div>`;
 }
 
@@ -316,8 +342,8 @@ function openSpot(id, keepView) {
   $("panel").innerHTML = `<span class="tag">ポイント ${s.no}・${s.hzName}</span>
     <h2>${s.name}</h2><p class="place">${s.place}</p>
     <div id="cibox">${checkinBox(s)}</div>
-    <div class="learn">${s.learn.map(t => `<p>${t}</p>`).join("")}</div>
-    <p class="q">Q. ${s.q}</p>
+    <div class="learn">${s.pose ? `<img class="learnpose" src="${POSE(s.pose)}" alt="">` : ""}${s.learn.map(t => `<p>${t}</p>`).join("")}</div>
+    ${guide("question", `Q. ${s.q}`, "q")}
     <div class="choices">${s.c.map((c, i) => `<button data-i="${i}">${c}</button>`).join("")}</div>
     <div id="res"></div><div id="mis"></div>
     <div class="btnrow"><button class="btn ghost" id="back">スタンプ帳へ</button></div>`;
@@ -335,13 +361,14 @@ function openSpot(id, keepView) {
     } else {
       state.tries[id] = (state.tries[id] || 0) + 1; save();
       b.classList.add("wrong"); b.disabled = true;
-      $("res").innerHTML = `<p class="result ng">ざんねん！もう一度考えてみよう。（次に正解すると50pt）</p>`;
+      $("res").innerHTML = guide("sad", "ざんねん…。もう一度考えてみよう。（次に正解すると50pt）", "ng");
     }
   });
 }
 function showAnswer(s, btns, already, gain) {
   btns.forEach((b, i) => { b.disabled = true; if (i === s.a) b.classList.add("right"); });
-  $("res").innerHTML = `<p class="result ok">${already ? `スタンプ獲得ずみ（${state.done[s.id]}pt）` : `正解！ +${gain}pt スタンプをゲット！`}<br><span style="font-weight:500;color:var(--ink)">${s.why}</span></p>`;
+  $("res").innerHTML = guide(already ? "stand" : "banzai",
+    `<b>${already ? `スタンプ獲得ずみ（${state.done[s.id]}pt）` : `正解！ +${gain}pt スタンプをゲット！`}</b><br>${s.why}`, "ok");
   if (s.mission) {
     const label = LABEL[s.mission];
     if (state.mission[s.id]) {
