@@ -1,16 +1,79 @@
 // とやま防災めぐり（GPS版）
-// ポイントの内容は spots.js にあります。
+// 防災ポイントの内容は spots.csv（Excelで編集できます）にあります。
 
 const HZ = ["洪水", "崖崩れ等", "高潮", "地震", "津波", "大規模な火事", "内水氾濫", "火山"];
 const LABEL = { 1: "洪水", 2: "崖崩れ・土石流", 8: "地震", 16: "津波" };
 const RANKS = [[0, "防災ビギナー"], [500, "防災サポーター"], [1000, "防災リーダー"], [1600, "防災エキスパート"], [2200, "とやま防災マスター"]];
+const CHECKIN_RADIUS_M = 300; // 現地チェックインできる距離（メートル）
 
-// 選択肢をシャッフル（spots.js では最初が正解）
-SPOTS.forEach(s => {
-  const right = s.c[0], arr = [...s.c];
-  for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
-  s.c = arr; s.a = arr.indexOf(right);
-});
+// ---------- spots.csv を読み込む ----------
+let SPOTS = [], CSV_ERRORS = [];
+
+// Excelの「CSV UTF-8」でも、ふつうの「CSV（Shift_JIS）」でも読めるようにする
+function decodeCsv(buf) {
+  try { return new TextDecoder("utf-8", { fatal: true }).decode(buf).replace(/^﻿/, ""); }
+  catch (e) { return new TextDecoder("shift_jis").decode(buf); }
+}
+// CSVを表（行の配列）に分ける。「"」で囲まれたカンマや改行にも対応
+function parseCsv(text) {
+  const rows = []; let row = [], cell = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) {
+      if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+      else cell += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === ",") { row.push(cell); cell = ""; }
+    else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && text[i + 1] === "\n") i++;
+      row.push(cell); rows.push(row); row = []; cell = "";
+    } else cell += ch;
+  }
+  if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+const MISSION_WORD = s => /洪水|浸水|大雨/.test(s) ? 1 : /崖|土砂|土石|地すべり|地滑り/.test(s) ? 2 : /津波/.test(s) ? 16 : /地震/.test(s) ? 8 : 0;
+
+function buildSpots(rows) {
+  const head = (rows.shift() || []).map(h => h.trim());
+  const col = name => head.indexOf(name);
+  const need = ["名前", "緯度", "経度", "問題", "正解"];
+  const missing = need.filter(n => col(n) < 0);
+  if (missing.length) { CSV_ERRORS.push(`1行目（見出し）に「${missing.join("」「")}」の列が見つかりません。`); return []; }
+  const get = (r, name) => col(name) < 0 ? "" : (r[col(name)] || "").trim();
+  const out = [], used = new Set();
+  rows.forEach((r, i) => {
+    const line = i + 2;
+    if (r.every(c => !c.trim())) return; // 空の行は飛ばす
+    const name = get(r, "名前"), lat = parseFloat(get(r, "緯度")), lng = parseFloat(get(r, "経度"));
+    const wrong = ["不正解1", "不正解2", "不正解3"].map(n => get(r, n)).filter(Boolean);
+    const errs = [];
+    if (!name) errs.push("名前が空です");
+    if (lat > 122 && lat < 154 && lng > 20 && lng < 46) errs.push("緯度と経度が逆になっています（緯度は36.○○、経度は137.○○）");
+    else {
+      if (!(lat > 20 && lat < 46)) errs.push("緯度が正しくありません（例：36.70）");
+      if (!(lng > 122 && lng < 154)) errs.push("経度が正しくありません（例：137.21）");
+    }
+    if (!get(r, "問題")) errs.push("問題が空です");
+    if (!get(r, "正解")) errs.push("正解が空です");
+    if (!wrong.length) errs.push("不正解が1つもありません");
+    if (errs.length) { CSV_ERRORS.push(`${line}行目（${name || "名前なし"}）：${errs.join("、")}`); return; }
+    let id = parseInt(get(r, "番号"), 10);
+    if (!(id > 0) || used.has(id)) id = 1000 + line;
+    used.add(id);
+    const c = [get(r, "正解"), ...wrong];
+    for (let k = c.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [c[k], c[j]] = [c[j], c[k]]; }
+    // 画面に出す文字は安全な形に変換しておく
+    out.push({
+      id, no: out.length + 1, name: esc(name), title: name, place: esc(get(r, "場所")), lat, lng, hzName: esc(get(r, "災害の種類") || "防災"),
+      mission: MISSION_WORD(get(r, "ミッション")),
+      learn: ["説明1", "説明2", "説明3"].map(n => esc(get(r, n))).filter(Boolean),
+      q: esc(get(r, "問題")), a: c.indexOf(get(r, "正解")), c: c.map(esc), why: esc(get(r, "解説"))
+    });
+  });
+  return out;
+}
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
 
 // ---------- 保存（この端末の中だけ） ----------
 let state = { done: {}, tries: {}, mission: {}, here: {} };
@@ -172,11 +235,13 @@ $("nearbtn").onclick = () => showNearby(0);
 
 // ---------- 防災ポイントのピン ----------
 const pinIcon = (s, sel) => L.divIcon({ className: "", iconSize: [30, 30], iconAnchor: [15, 15],
-  html: `<div class="pin ${state.done[s.id] ? "done" : ""} ${state.here[s.id] ? "here" : ""} ${sel ? "sel" : ""}">${s.id}</div>` });
-SPOTS.forEach(s => {
-  s.marker = L.marker([s.lat, s.lng], { icon: pinIcon(s, false), title: s.name, zIndexOffset: 1000 }).addTo(map);
-  s.marker.on("click", () => openSpot(s.id));
-});
+  html: `<div class="pin ${state.done[s.id] ? "done" : ""} ${state.here[s.id] ? "here" : ""} ${sel ? "sel" : ""}">${s.no}</div>` });
+function createPins() {
+  SPOTS.forEach(s => {
+    s.marker = L.marker([s.lat, s.lng], { icon: pinIcon(s, false), title: s.title, zIndexOffset: 1000 }).addTo(map);
+    s.marker.on("click", () => openSpot(s.id));
+  });
+}
 
 // ---------- 画面 ----------
 const total = () => Object.values(state.done).reduce((a, b) => a + b, 0) + Object.keys(state.mission).length * 50 + Object.keys(state.here).length * 100;
@@ -195,7 +260,7 @@ function refresh(sel) {
   $("list").innerHTML = SPOTS.map(s => {
     const pts = (state.done[s.id] || 0) + (state.mission[s.id] ? 50 : 0) + (state.here[s.id] ? 100 : 0);
     const dist = me ? fmt(km(me.lat, me.lng, s.lat, s.lng)) : s.hzName;
-    return `<li class="${state.done[s.id] ? "done" : ""} ${state.here[s.id] ? "here" : ""}"><button data-id="${s.id}"><span class="n">${s.id}</span><span>${s.name}</span><span class="p">${pts ? pts + "pt・" : ""}${dist}</span></button></li>`;
+    return `<li class="${state.done[s.id] ? "done" : ""} ${state.here[s.id] ? "here" : ""}"><button data-id="${s.id}"><span class="n">${s.no}</span><span>${s.name}</span><span class="p">${pts ? pts + "pt・" : ""}${dist}</span></button></li>`;
   }).join("");
   document.querySelectorAll("#list button").forEach(b => b.onclick = () => { openSpot(+b.dataset.id); $("map").scrollIntoView({ behavior: "smooth", block: "start" }); });
 }
@@ -203,10 +268,10 @@ function refresh(sel) {
 function home() {
   current = null; refresh(0);
   const p = total(), next = RANKS.find(r => r[0] > p);
-  $("panel").innerHTML = `<div class="intro"><span class="tag">あそびかた</span>
+  $("panel").innerHTML = `${csvWarning()}<div class="intro"><span class="tag">あそびかた</span>
     <ol><li>地図の番号をタップして、防災ポイントを開こう</li><li>説明を読んでクイズに答えると、スタンプがもらえるよ</li><li>ミッションで、近くの避難場所を地図からさがそう</li><li>実際にその場所へ行って「現地チェックイン」すると、金のスタンプと +100pt！</li></ol></div>
     <div><span class="tag">いまの称号</span><p class="rank">${rankOf(p)}</p><p class="note">${next ? `あと ${next[0] - p}pt で「${next[1]}」` : "すべての称号を手に入れました！"}</p></div>
-    <div><span class="tag">スタンプ帳（金色＝現地、緑の丸＝ミッション）</span><div class="stamps">${SPOTS.map(s => `<button class="stamp ${state.done[s.id] ? "got" : ""} ${state.here[s.id] ? "here" : ""}" data-id="${s.id}" aria-label="${s.name}">${state.done[s.id] || state.here[s.id] ? s.name.replace(/・.*|の.*/, "") : s.id}${state.mission[s.id] ? '<i class="m"></i>' : ""}</button>`).join("")}</div></div>
+    <div><span class="tag">スタンプ帳（金色＝現地、緑の丸＝ミッション）</span><div class="stamps">${SPOTS.map(s => `<button class="stamp ${state.done[s.id] ? "got" : ""} ${state.here[s.id] ? "here" : ""}" data-id="${s.id}" aria-label="${s.name}">${state.done[s.id] || state.here[s.id] ? s.name.replace(/・.*|の.*/, "") : s.no}${state.mission[s.id] ? '<i class="m"></i>' : ""}</button>`).join("")}</div></div>
     ${Object.keys(state.done).length || Object.keys(state.here).length ? `<div class="btnrow"><button class="btn ghost" id="reset">はじめからやり直す</button></div>` : ""}`;
   $("panel").querySelectorAll(".stamp").forEach(b => b.onclick = () => openSpot(+b.dataset.id));
   const r = $("reset");
@@ -230,7 +295,7 @@ function openSpot(id, keepView) {
   if (mission && mission.id !== id) endMission();
   current = id; refresh(id);
   if (!keepView) map.flyTo([s.lat, s.lng], Math.max(map.getZoom(), 13), { duration: .6 });
-  $("panel").innerHTML = `<span class="tag">ポイント ${s.id}・${s.hzName}</span>
+  $("panel").innerHTML = `<span class="tag">ポイント ${s.no}・${s.hzName}</span>
     <h2>${s.name}</h2><p class="place">${s.place}</p>
     <div id="cibox">${checkinBox(s)}</div>
     <div class="learn">${s.learn.map(t => `<p>${t}</p>`).join("")}</div>
@@ -272,7 +337,18 @@ function showAnswer(s, btns, already, gain) {
   if (nextSpot) { const b = document.createElement("button"); b.className = "btn"; b.textContent = `次のポイント：${nextSpot.name}`; b.onclick = () => openSpot(nextSpot.id); $("panel").querySelector(".btnrow").prepend(b); }
 }
 
-home();
+// CSVに入力ミスがあったときのお知らせ
+function csvWarning() {
+  if (!CSV_ERRORS.length) return "";
+  return `<div class="result ng" style="font-weight:500"><b>spots.csv に読み込めない行がありました</b><br>${CSV_ERRORS.map(esc).join("<br>")}<br>この行は地図に表示していません。CSVを直して、もう一度アップロードしてください。</div>`;
+}
+
+// ---------- 起動 ----------
+fetch("spots.csv", { cache: "no-cache" })
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+  .then(buf => { SPOTS = buildSpots(parseCsv(decodeCsv(buf))); })
+  .catch(() => { CSV_ERRORS.push("spots.csv が読み込めませんでした。ファイル名が spots.csv になっているか確認してください。"); })
+  .then(() => { createPins(); home(); });
 
 // ---------- オフラインでも開けるようにする ----------
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
