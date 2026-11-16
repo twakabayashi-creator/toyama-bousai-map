@@ -35,6 +35,7 @@
         <label><input type="checkbox" id="ly-dosha" checked><span class="sw" style="background:#f39800"></span>土砂災害</label>
         <label><input type="checkbox" id="ly-volcano" checked><span class="sw" style="background:var(--volcano)"></span>火山</label>
         <label><input type="checkbox" id="ly-shelter" checked><span class="sw" style="background:var(--shelter);border-radius:50%"></span>避難場所</label>
+        <label id="ly-sponsor-label" hidden><input type="checkbox" id="ly-sponsor" checked><span class="sw" style="background:var(--pr)"></span>協賛スポット（PR）</label>
       </div>
       <div class="mapwrap">
         <div id="map"></div>
@@ -60,13 +61,21 @@
     <ul id="list"></ul>
   </section>
 
+  <section class="list splist" id="sponsorlist" hidden>
+    <h3>協賛スポット（PR）</h3>
+    <p class="note">このアプリを応援してくれている企業・お店です。お店で来店チェックインすると、クーポンが使えます。</p>
+    <ul id="splist"></ul>
+  </section>
+
   <p class="credit">
     出典：背景地図・洪水・津波・土砂災害＝<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院（地理院タイル）</a>・<a href="https://disaportal.gsi.go.jp/hazardmapportal/hazardmap/copyright/opendata.html" target="_blank" rel="noopener">ハザードマップポータルサイト</a>（洪水＝想定最大規模、国・県管理河川）／指定緊急避難場所・弥陀ヶ原火山ハザードマップ＝<a href="https://publicsite.tdcp.pref.toyama.jp/toyama16000/panel/1747374412481" target="_blank" rel="noopener">富山データ連携基盤（富山県）</a>（2026年11月16日取得・加工）。<br>
-    このアプリは学習用です。災害時は、市町村からの避難情報と、お住まいの市町村のハザードマップを必ず確認してください。位置情報はこの端末の中だけで使い、どこにも送信しません。
+    このアプリは学習用です。災害時は、市町村からの避難情報と、お住まいの市町村のハザードマップを必ず確認してください。「PR」の付いたスポットは協賛企業の紹介（広告）で、避難場所ではありません。<br>位置情報はこの端末の中だけで使い、どこにも送信しません。詳しくは<a href="privacy.html">プライバシーポリシー</a>をご覧ください。
   </p>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="config.js"></script>
 <script src="app.js"></script>
+<script src="sponsors.js"></script>
 </body>
 </html>

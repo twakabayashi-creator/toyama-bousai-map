@@ -76,7 +76,7 @@ function buildSpots(rows) {
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
 
 // ---------- 保存（この端末の中だけ） ----------
-let state = { done: {}, tries: {}, mission: {}, here: {} };
+let state = { done: {}, tries: {}, mission: {}, here: {}, sp: {}, coupon: {}, seen: {} };
 try { const s = JSON.parse(localStorage.getItem("toyama-bousai-gps") || "null"); if (s && s.done) state = { ...state, ...s }; } catch (e) {}
 const save = () => { try { localStorage.setItem("toyama-bousai-gps", JSON.stringify(state)); } catch (e) {} };
 
@@ -217,7 +217,7 @@ function canCheckIn(s) {
 // ---------- 近くの避難場所 ----------
 function showNearby(bit) {
   if (!me) return;
-  endMission(); current = null; refresh(0);
+  endMission(); current = null; currentSponsor = null; refresh(0);
   map.flyTo([me.lat, me.lng], 15, { duration: .6 });
   const list = SHELTERS.filter(s => !bit || (s.m & bit)).map(s => ({ s, d: km(me.lat, me.lng, s.lat, s.lng) })).sort((a, b) => a.d - b.d).slice(0, 5);
   const tabs = [[0, "すべて"], [1, "洪水"], [16, "津波"], [8, "地震"], [2, "崖崩れ"]];
@@ -237,6 +237,7 @@ $("nearbtn").onclick = () => showNearby(0);
 const pinIcon = (s, sel) => L.divIcon({ className: "", iconSize: [30, 30], iconAnchor: [15, 15],
   html: `<div class="pin ${state.done[s.id] ? "done" : ""} ${state.here[s.id] ? "here" : ""} ${sel ? "sel" : ""}">${s.no}</div>` });
 function createPins() {
+  createSponsorPins();
   SPOTS.forEach(s => {
     s.marker = L.marker([s.lat, s.lng], { icon: pinIcon(s, false), title: s.title, zIndexOffset: 1000 }).addTo(map);
     s.marker.on("click", () => openSpot(s.id));
@@ -244,10 +245,10 @@ function createPins() {
 }
 
 // ---------- 画面 ----------
-const total = () => Object.values(state.done).reduce((a, b) => a + b, 0) + Object.keys(state.mission).length * 50 + Object.keys(state.here).length * 100;
+const total = () => Object.values(state.done).reduce((a, b) => a + b, 0) + Object.keys(state.mission).length * 50 + Object.keys(state.here).length * 100 + Object.keys(state.sp).length * 50;
 const rankOf = p => RANKS.filter(r => p >= r[0]).pop()[1];
 let current = null;
-function rerender() { if (current) openSpot(current, true); else refresh(0); }
+function rerender() { if (currentSponsor) openSponsor(currentSponsor, true); else if (current) openSpot(current, true); else refresh(0); }
 
 function refresh(sel) {
   const p = total(), n = Object.keys(state.done).length;
@@ -257,6 +258,7 @@ function refresh(sel) {
   $("rk").textContent = rankOf(p);
   $("barfill").style.width = (n / SPOTS.length * 100) + "%";
   SPOTS.forEach(s => s.marker.setIcon(pinIcon(s, s.id === sel)));
+  renderSponsorList(sel);
   $("list").innerHTML = SPOTS.map(s => {
     const pts = (state.done[s.id] || 0) + (state.mission[s.id] ? 50 : 0) + (state.here[s.id] ? 100 : 0);
     const dist = me ? fmt(km(me.lat, me.lng, s.lat, s.lng)) : s.hzName;
@@ -266,7 +268,7 @@ function refresh(sel) {
 }
 
 function home() {
-  current = null; refresh(0);
+  current = null; currentSponsor = null; refresh(0);
   const p = total(), next = RANKS.find(r => r[0] > p);
   $("panel").innerHTML = `${csvWarning()}<div class="intro"><span class="tag">あそびかた</span>
     <ol><li>地図の番号をタップして、防災ポイントを開こう</li><li>説明を読んでクイズに答えると、スタンプがもらえるよ</li><li>ミッションで、近くの避難場所を地図からさがそう</li><li>実際にその場所へ行って「現地チェックイン」すると、金のスタンプと +100pt！</li></ol></div>
@@ -277,7 +279,7 @@ function home() {
   const r = $("reset");
   if (r) r.onclick = () => {
     r.outerHTML = `<span class="note">スタンプとポイントを全部消します。</span><button class="btn" id="reset2">消す</button><button class="btn ghost" id="cancel">やめる</button>`;
-    $("reset2").onclick = () => { state = { done: {}, tries: {}, mission: {}, here: {} }; save(); home(); };
+    $("reset2").onclick = () => { state = { done: {}, tries: {}, mission: {}, here: {}, sp: {}, coupon: {}, seen: {} }; save(); home(); };
     $("cancel").onclick = home;
   };
 }
@@ -292,6 +294,7 @@ function checkinBox(s) {
 
 function openSpot(id, keepView) {
   const s = SPOTS.find(x => x.id === id);
+  currentSponsor = null;
   if (mission && mission.id !== id) endMission();
   current = id; refresh(id);
   if (!keepView) map.flyTo([s.lat, s.lng], Math.max(map.getZoom(), 13), { duration: .6 });
@@ -339,16 +342,20 @@ function showAnswer(s, btns, already, gain) {
 
 // CSVに入力ミスがあったときのお知らせ
 function csvWarning() {
-  if (!CSV_ERRORS.length) return "";
-  return `<div class="result ng" style="font-weight:500"><b>spots.csv に読み込めない行がありました</b><br>${CSV_ERRORS.map(esc).join("<br>")}<br>この行は地図に表示していません。CSVを直して、もう一度アップロードしてください。</div>`;
+  const box = (file, errs) => errs.length ? `<div class="result ng" style="font-weight:500"><b>${file} に読み込めない行がありました</b><br>${errs.map(esc).join("<br>")}<br>この行は地図に表示していません。CSVを直して、もう一度アップロードしてください。</div>` : "";
+  return box("spots.csv", CSV_ERRORS) + box("sponsors.csv", SPONSOR_ERRORS);
 }
 
 // ---------- 起動 ----------
-fetch("spots.csv", { cache: "no-cache" })
+const loadCsv = file => fetch(file, { cache: "no-cache" })
   .then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
-  .then(buf => { SPOTS = buildSpots(parseCsv(decodeCsv(buf))); })
-  .catch(() => { CSV_ERRORS.push("spots.csv が読み込めませんでした。ファイル名が spots.csv になっているか確認してください。"); })
-  .then(() => { createPins(); home(); });
+  .then(buf => parseCsv(decodeCsv(buf)));
+Promise.all([
+  loadCsv("spots.csv").then(rows => { SPOTS = buildSpots(rows); })
+    .catch(() => { CSV_ERRORS.push("spots.csv が読み込めませんでした。ファイル名が spots.csv になっているか確認してください。"); }),
+  loadCsv("sponsors.csv").then(rows => { SPONSORS = buildSponsors(rows); })
+    .catch(() => { /* sponsors.csv が無いときは協賛スポットなしで動かす */ })
+]).then(() => { createPins(); home(); track("open", 0); });
 
 // ---------- オフラインでも開けるようにする ----------
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
