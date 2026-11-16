@@ -2,7 +2,7 @@
 
 社内オリジナルキャラクター（しっぽがプラグのクマ）の、背景を透明にした素材です。
 front / stand-side / tools / side / sleep は、元のPDFから高解像度で切り出しています。
-surprise / question / happy-tools / peek / sad は、いただいた画像（約200ピクセル）をそのまま保存しています。
+surprise / question / happy-tools / peek / sad / screwdriver / sit / back / eat / plug-on は、いただいた画像（約200ピクセル）をそのまま保存しています。
 
 | ファイル | ポーズ |
 |---|---|
@@ -16,5 +16,10 @@ surprise / question / happy-tools / peek / sad は、いただいた画像（約
 | `happy-tools.png` | ドライバーとスパナを持ってにっこり |
 | `peek.png` | 壁からのぞく |
 | `sad.png` | しょんぼり |
+| `screwdriver.png` | ドライバーを持って横向きに歩く |
+| `sit.png` | 正面を向いて座る |
+| `back.png` | 後ろ姿 |
+| `eat.png` | 座って食べる |
+| `plug-on.png` | プラグをコンセントに差す（ON） |
 
 アプリの画面ではまだ使っていません（現在地のキャラクターは `images/character.gif`）。
