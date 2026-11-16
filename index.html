@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>とやま防災めぐり</title>
+<meta name="description" content="富山県のハザードマップ上の防災ポイントを巡って、クイズと現地チェックインで防災を学ぶアプリ">
+<meta name="theme-color" content="#16323b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><small>ハザードマップで学ぶ 富山の防災</small>とやま防災めぐり</h1>
+    <div class="score">
+      <div class="chip"><span>ポイント</span><b id="pt">0</b></div>
+      <div class="chip"><span>スタンプ</span><b id="st">0 / 10</b></div>
+      <div class="chip"><span>現地</span><b id="ci">0 / 10</b></div>
+      <div class="chip"><span>称号</span><b id="rk" class="rk">防災ビギナー</b></div>
+    </div>
+  </header>
+  <div class="bar" aria-hidden="true"><i id="barfill"></i></div>
+
+  <div class="main">
+    <section class="mapbox" aria-label="富山県ハザードマップ">
+      <div class="layers" role="group" aria-label="表示するハザード情報">
+        <label><input type="checkbox" id="ly-flood" checked><span class="sw" style="background:#ffb7b7"></span>洪水</label>
+        <label><input type="checkbox" id="ly-tsunami" checked><span class="sw" style="background:#f7f5a9;border:1px solid #d8d27a"></span>津波</label>
+        <label><input type="checkbox" id="ly-dosha" checked><span class="sw" style="background:#f39800"></span>土砂災害</label>
+        <label><input type="checkbox" id="ly-volcano" checked><span class="sw" style="background:var(--volcano)"></span>火山</label>
+        <label><input type="checkbox" id="ly-shelter" checked><span class="sw" style="background:var(--shelter);border-radius:50%"></span>避難場所</label>
+      </div>
+      <div class="mapwrap">
+        <div id="map"></div>
+        <div class="mission-banner" id="banner" hidden><span id="bannertext"></span><button id="bannerclose">やめる</button></div>
+      </div>
+      <div class="gpsbar">
+        <button class="btn blue" id="gpsbtn">📍 現在地をオンにする</button>
+        <button class="btn ghost" id="nearbtn" hidden>近くの避難場所をさがす</button>
+        <span class="note" id="gpsmsg">現在地をオンにすると、ポイントに行ったときに「現地チェックイン」ができます。</span>
+      </div>
+      <div class="legend">
+        <span>浸水の深さ</span>
+        <span class="scale"><i style="background:#f7f5a9"></i>0.5m<i style="background:#ffd8c0"></i>3m<i style="background:#ffb7b7"></i>5m<i style="background:#ff9191"></i>10m<i style="background:#f285c9"></i>20m<i style="background:#dc7adc"></i></span>
+        <span>土砂災害：黄〜橙＝警戒区域、赤＝特別警戒区域</span>
+      </div>
+    </section>
+
+    <section class="panel" id="panel" aria-live="polite"></section>
+  </div>
+
+  <section class="list">
+    <h3>防災ポイント一覧</h3>
+    <ul id="list"></ul>
+  </section>
+
+  <p class="credit">
+    出典：背景地図・洪水・津波・土砂災害＝<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院（地理院タイル）</a>・<a href="https://disaportal.gsi.go.jp/hazardmapportal/hazardmap/copyright/opendata.html" target="_blank" rel="noopener">ハザードマップポータルサイト</a>（洪水＝想定最大規模、国・県管理河川）／指定緊急避難場所・弥陀ヶ原火山ハザードマップ＝<a href="https://publicsite.tdcp.pref.toyama.jp/toyama16000/panel/1747374412481" target="_blank" rel="noopener">富山データ連携基盤（富山県）</a>（2026年11月16日取得・加工）。<br>
+    このアプリは学習用です。災害時は、市町村からの避難情報と、お住まいの市町村のハザードマップを必ず確認してください。位置情報はこの端末の中だけで使い、どこにも送信しません。
+  </p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="spots.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
