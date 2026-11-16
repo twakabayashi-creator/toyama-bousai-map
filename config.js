@@ -10,3 +10,11 @@ const ANALYTICS_ENDPOINT = "";
 
 // 協賛スポットでチェックインできる距離（メートル）
 const SPONSOR_RADIUS_M = 300;
+
+// 自分のいる場所に表示するキャラクター画像（GIF・PNGなど）。
+// images フォルダーに置いた画像のファイル名を書きます。
+// 空欄 "" にすると、青い点で表示します。
+const MY_CHARACTER_IMAGE = "images/character.gif";
+
+// キャラクターの表示の高さ（ピクセル）。幅は画像の形に合わせて自動で決まります。
+const MY_CHARACTER_HEIGHT = 64;

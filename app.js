@@ -172,6 +172,21 @@ function shelterClick(sh) {
 
 // ---------- GPS（現在地） ----------
 let me = null, meMarker = null, meCircle = null, watchId = null, firstFix = true;
+
+// 自分の位置のマーク：キャラクター画像が読み込めたらそれを、だめなら青い点を使う
+let charImg = null;
+if (typeof MY_CHARACTER_IMAGE !== "undefined" && MY_CHARACTER_IMAGE) {
+  const im = new Image();
+  im.onload = () => { charImg = im; if (meMarker) meMarker.setIcon(meIcon()); };
+  im.src = MY_CHARACTER_IMAGE;
+}
+function meIcon() {
+  if (!charImg) return L.divIcon({ className: "", html: '<div class="me"></div>', iconSize: [18, 18], iconAnchor: [9, 9] });
+  const h = (typeof MY_CHARACTER_HEIGHT !== "undefined" && MY_CHARACTER_HEIGHT) || 64;
+  const w = Math.round(h * charImg.naturalWidth / charImg.naturalHeight);
+  // 足元（画像の下のまん中）が現在地になるように置く
+  return L.icon({ iconUrl: charImg.src, iconSize: [w, h], iconAnchor: [w / 2, h], className: "mechar" });
+}
 $("gpsbtn").onclick = () => {
   if (watchId !== null) { stopGps(); return; }
   if (!("geolocation" in navigator)) { $("gpsmsg").textContent = "この端末では現在地が使えません。"; return; }
@@ -190,7 +205,7 @@ function onPos(p) {
   me = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy };
   if (!meMarker) {
     meCircle = L.circle([me.lat, me.lng], { radius: me.acc, color: "#1a73e8", weight: 1, fillOpacity: .1 }).addTo(map);
-    meMarker = L.marker([me.lat, me.lng], { icon: L.divIcon({ className: "", html: '<div class="me"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }), zIndexOffset: 2000, title: "いまいる場所" }).addTo(map);
+    meMarker = L.marker([me.lat, me.lng], { icon: meIcon(), zIndexOffset: 2000, title: "いまいる場所" }).addTo(map);
   } else { meMarker.setLatLng([me.lat, me.lng]); meCircle.setLatLng([me.lat, me.lng]).setRadius(me.acc); }
   if (firstFix) { firstFix = false; map.flyTo([me.lat, me.lng], Math.max(map.getZoom(), 14), { duration: .8 }); }
   $("nearbtn").hidden = false;
