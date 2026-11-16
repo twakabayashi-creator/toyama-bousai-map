@@ -17,4 +17,4 @@ const SPONSOR_RADIUS_M = 300;
 const MY_CHARACTER_IMAGE = "images/character.gif";
 
 // キャラクターの表示の高さ（ピクセル）。幅は画像の形に合わせて自動で決まります。
-const MY_CHARACTER_HEIGHT = 64;
+const MY_CHARACTER_HEIGHT = 72;
