@@ -45,6 +45,7 @@
         <img class="gpsbear" src="images/poses/plug-on.png" alt="" width="56" height="54">
         <button class="btn blue" id="gpsbtn">📍 現在地をオンにする</button>
         <button class="btn ghost" id="nearbtn" hidden>近くの避難場所をさがす</button>
+        <button class="btn ghost" id="homebtn">🏠 わが家</button>
         <span class="note" id="gpsmsg">現在地をオンにすると、ポイントに行ったときに「現地チェックイン」ができます。</span>
       </div>
       <div class="legend">
@@ -78,5 +79,7 @@
 <script src="config.js"></script>
 <script src="app.js"></script>
 <script src="sponsors.js"></script>
+<script src="homecheck.js"></script>
+<script>$("homebtn").onclick = () => { openHome(); $("panel").scrollIntoView({ behavior: "smooth", block: "start" }); };</script>
 </body>
 </html>

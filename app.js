@@ -285,7 +285,7 @@ function createPins() {
 }
 
 // ---------- 画面 ----------
-const total = () => Object.values(state.done).reduce((a, b) => a + b, 0) + Object.keys(state.mission).length * 50 + Object.keys(state.here).length * 100 + Object.keys(state.sp).length * 50;
+const total = () => Object.values(state.done).reduce((a, b) => a + b, 0) + Object.keys(state.mission).length * 50 + Object.keys(state.here).length * 100 + Object.keys(state.sp).length * 50 + (state.homeCheck ? 50 : 0);
 const rankOf = p => RANKS.filter(r => p >= r[0]).pop()[1];
 let current = null;
 function rerender() { if (currentSponsor) openSponsor(currentSponsor, true); else if (current) openSpot(current, true); else refresh(0); }
@@ -311,16 +311,18 @@ function refresh(sel) {
 function home() {
   current = null; currentSponsor = null; refresh(0);
   const p = total(), next = RANKS.find(r => r[0] > p);
-  $("panel").innerHTML = `${csvWarning()}${guide("peek", "いっしょに防災ポイントをめぐろう！")}<div class="intro"><span class="tag">あそびかた</span>
+  $("panel").innerHTML = `${csvWarning()}${guide("peek", "いっしょに防災ポイントをめぐろう！")}
+    <div class="box home-cta"><b class="t">🏠 わが家</b><span>${state.home ? "わが家の浸水の深さや、近くの避難場所を確かめよう。" : "自宅を登録すると、わが家の危険と近くの避難場所がわかります（+50pt）。"}</span><div><button class="btn green" id="homebtn2">${state.home ? "わが家のハザードチェック" : "自宅を登録する"}</button></div></div><div class="intro"><span class="tag">あそびかた</span>
     <ol><li>地図の番号をタップして、防災ポイントを開こう</li><li>説明を読んでクイズに答えると、スタンプがもらえるよ</li><li>ミッションで、近くの避難場所を地図からさがそう</li><li>実際にその場所へ行って「現地チェックイン」すると、金のスタンプと +100pt！</li></ol></div>
     <div><span class="tag">いまの称号</span><p class="rank">${rankOf(p)}</p><p class="note">${next ? `あと ${next[0] - p}pt で「${next[1]}」` : "すべての称号を手に入れました！"}</p></div>
     <div><span class="tag">スタンプ帳（金色＝現地、緑の丸＝ミッション）</span><div class="stamps">${SPOTS.map(s => `<button class="stamp ${state.done[s.id] ? "got" : ""} ${state.here[s.id] ? "here" : ""}" data-id="${s.id}" aria-label="${s.name}">${state.done[s.id] || state.here[s.id] ? s.name.replace(/・.*|の.*/, "") : s.no}${state.mission[s.id] ? '<i class="m"></i>' : ""}</button>`).join("")}</div></div>
     ${Object.keys(state.done).length || Object.keys(state.here).length ? `<div class="btnrow"><button class="btn ghost" id="reset">はじめからやり直す</button></div>` : ""}`;
   $("panel").querySelectorAll(".stamp").forEach(b => b.onclick = () => openSpot(+b.dataset.id));
+  $("homebtn2").onclick = () => openHome();
   const r = $("reset");
   if (r) r.onclick = () => {
     r.outerHTML = `<span class="note">スタンプとポイントを全部消します。</span><button class="btn" id="reset2">消す</button><button class="btn ghost" id="cancel">やめる</button>`;
-    $("reset2").onclick = () => { state = { done: {}, tries: {}, mission: {}, here: {}, sp: {}, coupon: {}, seen: {} }; save(); home(); };
+    $("reset2").onclick = () => { state = { done: {}, tries: {}, mission: {}, here: {}, sp: {}, coupon: {}, seen: {}, home: state.home }; save(); home(); };
     $("cancel").onclick = home;
   };
 }
@@ -397,7 +399,7 @@ Promise.all([
     .catch(() => { CSV_ERRORS.push("spots.csv が読み込めませんでした。ファイル名が spots.csv になっているか確認してください。"); }),
   loadCsv("sponsors.csv").then(rows => { SPONSORS = buildSponsors(rows); })
     .catch(() => { /* sponsors.csv が無いときは協賛スポットなしで動かす */ })
-]).then(() => { createPins(); home(); track("open", 0); });
+]).then(() => { createPins(); drawHome(); home(); track("open", 0); });
 
 // ---------- オフラインでも開けるようにする ----------
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
