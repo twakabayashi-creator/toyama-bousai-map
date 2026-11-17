@@ -183,3 +183,13 @@ a.btn{display:inline-block;text-decoration:none}
 .cleft{font-size:14px}.cleft b{color:var(--ng);font-variant-numeric:tabular-nums}
 .coupon small{color:var(--muted)}
 @media (prefers-reduced-motion:reduce){.cstripe,.coupon.live{animation:none}}
+
+/* 協賛スポット一覧：店名を読みやすく */
+.splist ul{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.splist li button{align-items:flex-start}
+.splist .spn{margin-top:3px}
+.splist .spname{flex:1;min-width:0;line-height:1.5}
+.splist .p{padding-top:2px}
+.sample{display:block;font-size:.8em;font-weight:700;color:var(--muted);letter-spacing:.02em}
+h2 .sample{font-family:var(--body);font-size:13px;margin-bottom:2px}
+.splist .spst{color:var(--pr);font-weight:700;margin-top:2px}

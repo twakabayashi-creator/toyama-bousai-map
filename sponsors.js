@@ -85,13 +85,15 @@ function createSponsorPins() {
     p.marker.on("click", () => openSponsor(p.id));
   });
 }
+// 「（サンプル）」で始まる名前は、そこで改行して表示する
+const sampleBreak = t => t.replace(/^([（(]サンプル[）)])\s*/, '<span class="sample">$1</span>');
 function renderSponsorList(sel) {
   if (!SPONSORS.length) return;
   SPONSORS.forEach(p => p.marker.setIcon(sponsorIcon(p, currentSponsor === p.id)));
   $("splist").innerHTML = SPONSORS.map(p => {
     const dist = me ? fmt(km(me.lat, me.lng, p.lat, p.lng)) : "";
     const st = state.coupon[p.id] ? "クーポン使用済み" : state.sp[p.id] ? "来店済み" : p.coupon ? "クーポンあり" : "";
-    return `<li><button data-sp="${p.id}"><span class="spn">PR</span><span>${p.name}${p.company ? `<small>${p.company}</small>` : ""}</span><span class="p">${[st, dist].filter(Boolean).join("・")}</span></button></li>`;
+    return `<li><button data-sp="${p.id}"><span class="spn">PR</span><span class="spname">${sampleBreak(p.name)}${p.company ? `<small>${sampleBreak(p.company)}</small>` : ""}${st || dist ? `<small class="spst">${[st, dist].filter(Boolean).join("・")}</small>` : ""}</span></button></li>`;
   }).join("");
   $("splist").querySelectorAll("button").forEach(b => b.onclick = () => { openSponsor(+b.dataset.sp); $("map").scrollIntoView({ behavior: "smooth", block: "start" }); });
 }
@@ -161,7 +163,7 @@ function openSponsor(id, keepView) {
   if (!keepView) { map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 15), { duration: .6 }); track("view", id); }
   const info = [p.address && `住所：${p.address}`, p.hours && `営業時間：${p.hours}`, p.tel && `電話：${p.tel}`].filter(Boolean);
   $("panel").innerHTML = `<span class="prtag">PR・協賛スポット</span>
-    <h2>${p.name}</h2>${p.company ? `<p class="place">${p.company}</p>` : ""}
+    <h2>${sampleBreak(p.name)}</h2>${p.company ? `<p class="place">${sampleBreak(p.company)}</p>` : ""}
     ${p.img ? `<img class="spimg" src="${esc(p.img)}" alt="${p.name}">` : ""}
     ${p.text ? `<div class="learn"><p>${p.text}</p></div>` : ""}
     <div id="cpbox">${couponBox(p)}</div>
