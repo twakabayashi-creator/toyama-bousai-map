@@ -9,6 +9,7 @@
 <style>
   .doc{max-width:960px;margin:0 auto;background:var(--surface);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:14px}
   .doc h1{font-size:24px;margin:0}
+  .doc h2{font-size:18px;margin:8px 0 0}
   .row{display:flex;flex-wrap:wrap;gap:8px;align-items:end}
   .row label{display:flex;flex-direction:column;font-size:12px;color:var(--muted);gap:2px}
   .row input{font:inherit;padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)}
@@ -18,10 +19,46 @@
   th:first-child,td:first-child{text-align:left;white-space:normal}
   tfoot td{font-weight:900}
   .kpi{display:flex;gap:10px;flex-wrap:wrap}
+  .complist{display:flex;flex-direction:column;gap:6px;list-style:none;margin:0;padding:0}
+  .complist li{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:8px 0;border-bottom:1px dashed var(--line)}
+
+  /* ---------- 報告書 ---------- */
+  .rep{max-width:820px;margin:0 auto;background:#fff;color:#16323b;border-radius:16px;padding:40px;display:flex;flex-direction:column;gap:18px;font-variant-numeric:tabular-nums}
+  .rep .rhead{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:8px;border-bottom:3px solid #2b3a8f;padding-bottom:14px}
+  .rep .rtitle{font-size:13px;letter-spacing:.2em;color:#2b3a8f;font-weight:900;margin:0}
+  .rep h1{font-size:26px;margin:4px 0 0;line-height:1.35}
+  .rep .rmeta{font-size:13px;color:#5b7179;line-height:1.7}
+  .rep .lead{font-size:15px;margin:0}
+  .rep .tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .rep .tile{border:1.5px solid #d5dfe2;border-radius:12px;padding:12px 14px}
+  .rep .tile span{display:block;font-size:12px;color:#5b7179}
+  .rep .tile b{display:block;font-size:28px;line-height:1.2}
+  .rep .tile small{color:#5b7179}
+  .rep .rates{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .rep .rate{background:#f1f4fa;border-radius:12px;padding:10px 14px}
+  .rep .rate span{display:block;font-size:12px;color:#5b7179}
+  .rep .rate b{font-size:22px;color:#2b3a8f}
+  .rep .rate small{display:block;font-size:11px;color:#5b7179}
+  .rep h2{font-size:16px;margin:6px 0 0;border-left:5px solid #2b3a8f;padding-left:10px}
+  .rep table th,.rep table td{border-bottom:1px solid #d5dfe2}
+  .rep .chart svg{width:100%;height:auto;display:block}
+  .rep .legend{display:flex;gap:16px;font-size:12px;color:#5b7179}
+  .rep .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:4px}
+  .rep .notes{font-size:12px;color:#5b7179;margin:0;padding-left:1.2em;line-height:1.8}
+  .rep .rfoot{font-size:12px;color:#5b7179;border-top:1px solid #d5dfe2;padding-top:10px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .repbar{max-width:820px;margin:0 auto 12px;display:flex;gap:8px;flex-wrap:wrap}
+  @media (max-width:640px){.rep{padding:20px}.rep .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.rep .rates{grid-template-columns:minmax(0,1fr)}}
+  @media print{
+    @page{size:A4;margin:14mm}
+    body{background:#fff!important;padding:0!important}
+    .noprint{display:none!important}
+    .rep{padding:0;border-radius:0;max-width:none}
+    .rep .tile,.rep .rate,.rep table,.rep .chart{break-inside:avoid}
+  }
 </style>
 </head>
 <body>
-<div class="doc">
+<div class="doc noprint" id="main">
   <h1>協賛スポット レポート</h1>
   <form class="row" id="f">
     <label>パスワード<input type="password" id="pw" autocomplete="current-password" required></label>
@@ -33,7 +70,22 @@
   <p class="note" id="msg">パスワードを入れて「表示する」を押してください。</p>
   <div class="kpi" id="kpi"></div>
   <div class="tbl"><table id="t"></table></div>
+  <section id="compsec" hidden>
+    <h2>企業ごとの報告書</h2>
+    <div class="row"><label>報告書の発行者名<input type="text" id="issuer" placeholder="例：○○株式会社 とやま防災めぐり運営事務局" size="36"></label></div>
+    <p class="note">「報告書を作る」を押すと、その企業の数字だけが載った報告書が表示されます。ほかの企業の数字は載りません。期間中に記録がある企業だけが並びます。</p>
+    <ul class="complist" id="complist"></ul>
+  </section>
   <p class="note">「見た」「アプリを開いた」は、同じ端末からは1日1回まで数えています。個人を特定できる情報は集めていません。</p>
+</div>
+
+<div id="repwrap" hidden>
+  <div class="repbar noprint">
+    <button class="btn ghost" id="back">← 一覧にもどる</button>
+    <button class="btn" id="print">印刷・PDFで保存</button>
+    <button class="btn ghost" id="repcsv">この企業のCSV</button>
+  </div>
+  <article class="rep" id="rep"></article>
 </div>
 <script src="/report.js"></script>
 </body>
