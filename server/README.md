@@ -19,8 +19,18 @@ REPORT_PASSWORD=好きなパスワード PORT=8080 node server/server.js
 | `PORT` | 待ち受けるポート（初期値 8080） |
 | `DATA_FILE` | 集計を保存するファイル（初期値 `server/data/counts.json`） |
 | `ALLOWED_ORIGIN` | アプリを別のドメインに置く場合、そのURL（例 `https://app.example.jp`） |
+| `TRUST_PROXY` | Nginx などをこのサーバーの前に置き、そこで送信元（X-Forwarded-For）を付け直している場合だけ `1`。それ以外は設定しない |
+| `HSTS` | HTTPS で公開している場合に `1` |
 
 本番では、Nginx などで HTTPS（https://〜）にしてください。スマホの位置情報は HTTPS でないと使えません。
+
+## 安全のための仕組み
+- `sponsors.csv` にある番号の協賛店の回数だけを受け付けます（CSVは5分ごとに読み直します）
+- 同じ送信元からの送信は1分に60回まで
+- レポートのパスワードを5回まちがえると、その送信元を15分受け付けません。パスワードは12文字以上にしてください
+- 壊れたURLや想定外のエラーでサーバーが止まらないようにしています
+- 安全用のヘッダー（CSP、X-Frame-Options など）を付けています
+- 回数の水増しを**完全に**防ぐことはできません。協賛企業へのレポートは「目安」として扱ってください
 
 ## アプリ側の設定
 `config.js` の `ANALYTICS_ENDPOINT` に、このサーバーのURLを書きます。

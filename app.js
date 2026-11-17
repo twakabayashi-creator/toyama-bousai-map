@@ -144,7 +144,8 @@ let SHELTERS = [];
 const canvas = L.canvas({ padding: .5 }), shelterLayer = L.layerGroup();
 const badges = m => HZ.map((h, i) => m & (1 << i) ? `<span class="hz">${h}</span>` : "").join("");
 fetch("data/shelters.json").then(r => r.json()).then(rows => {
-  SHELTERS = rows.map(([name, city, lat, lng, m]) => ({ name, city, lat, lng, m }));
+  // 名前は画面に出す前に安全な形に変換しておく（データに記号が混ざっていても画面が壊れないように）
+  SHELTERS = rows.map(([name, city, lat, lng, m]) => ({ name: esc(name), city: esc(city), lat: +lat, lng: +lng, m: m | 0 }));
   SHELTERS.forEach(s => {
     s.marker = L.circleMarker([s.lat, s.lng], { renderer: canvas, radius: 5, color: "#fff", weight: 1.5, fillColor: "#1f8a5b", fillOpacity: 1 });
     s.marker.on("click", () => shelterClick(s));
@@ -381,7 +382,7 @@ function showAnswer(s, btns, already, gain) {
     }
   }
   const nextSpot = SPOTS.find(x => !state.done[x.id]);
-  if (nextSpot) { const b = document.createElement("button"); b.className = "btn"; b.textContent = `次のポイント：${nextSpot.name}`; b.onclick = () => openSpot(nextSpot.id); $("panel").querySelector(".btnrow").prepend(b); }
+  if (nextSpot) { const b = document.createElement("button"); b.className = "btn"; b.textContent = `次のポイント：${nextSpot.title}`; b.onclick = () => openSpot(nextSpot.id); $("panel").querySelector(".btnrow").prepend(b); }
 }
 
 // CSVに入力ミスがあったときのお知らせ
@@ -394,7 +395,10 @@ function csvWarning() {
 const loadCsv = file => fetch(file, { cache: "no-cache" })
   .then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
   .then(buf => parseCsv(decodeCsv(buf)));
+// すべてのファイル（sponsors.js・homecheck.js）を読み終えてから始める
+const ready = document.readyState === "loading" ? new Promise(r => document.addEventListener("DOMContentLoaded", r)) : Promise.resolve();
 Promise.all([
+  ready,
   loadCsv("spots.csv").then(rows => { SPOTS = buildSpots(rows); })
     .catch(() => { CSV_ERRORS.push("spots.csv が読み込めませんでした。ファイル名が spots.csv になっているか確認してください。"); }),
   loadCsv("sponsors.csv").then(rows => { SPONSORS = buildSponsors(rows); })

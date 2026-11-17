@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!-- 読み込んでよい場所を限定する安全設定。効果測定の送り先を別のドメインにしたときは connect-src にそのURLを足す -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://msearch.gsi.go.jp; worker-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <title>とやま防災めぐり</title>
 <meta name="description" content="富山県のハザードマップ上の防災ポイントを巡って、クイズと現地チェックインで防災を学ぶアプリ">
 <meta name="theme-color" content="#16323b">
@@ -11,7 +14,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -75,11 +78,10 @@
   </p>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="vendor/leaflet/leaflet.js"></script>
 <script src="config.js"></script>
 <script src="app.js"></script>
 <script src="sponsors.js"></script>
 <script src="homecheck.js"></script>
-<script>$("homebtn").onclick = () => { openHome(); $("panel").scrollIntoView({ behavior: "smooth", block: "start" }); };</script>
 </body>
 </html>

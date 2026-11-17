@@ -140,6 +140,9 @@ async function searchAddress(q) {
   }
 }
 
+// 地図の下の「🏠 わが家」ボタン
+$("homebtn").onclick = () => { openHome(); $("panel").scrollIntoView({ behavior: "smooth", block: "start" }); };
+
 // ---------- わが家のハザードチェック ----------
 async function openHome() {
   if (!state.home) { openHomeRegister(); return; }

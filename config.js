@@ -7,6 +7,8 @@
 // 集計サーバー（server/ フォルダー）を動かしたら、そのURLを書きます。
 //   例：const ANALYTICS_ENDPOINT = "https://example.jp/api/event";
 const ANALYTICS_ENDPOINT = "";
+// ※送り先をアプリと別のドメインにしたときは、index.html の安全設定（Content-Security-Policy）の
+//   connect-src にもそのURLを足してください。足さないと送信がブロックされます。
 
 // 協賛スポットでチェックインできる距離（メートル）
 const SPONSOR_RADIUS_M = 300;
