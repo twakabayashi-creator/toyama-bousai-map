@@ -23,7 +23,7 @@
 | `index.html` | 画面の骨組み・出典表示 | 触らなくてOK |
 | `data/shelters.json` | 指定緊急避難場所（1,435か所） | データ更新時のみ |
 | `data/volcano.json` | 弥陀ヶ原火山ハザードマップ | データ更新時のみ |
-| `sw.js` | 電波が弱くても開けるようにする仕組み | `spots.csv` 以外を変えたら `VERSION` を1つ増やす |
+| `sw.js` | 電波が弱くても開けるようにする仕組み | `spots.csv` 以外を変えたら `VERSION` を1つ増やし、`config.js` の `APP_VERSION`（画面に出る版の日付）も書きかえる |
 
 ## 防災ポイントを追加・変更したいとき（CSV）
 

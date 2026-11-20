@@ -419,6 +419,9 @@ function csvWarning() {
 const loadCsv = file => fetch(file, { cache: "no-cache" })
   .then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
   .then(buf => parseCsv(decodeCsv(buf)));
+// 画面のいちばん下に版を表示
+if (typeof APP_VERSION !== "undefined") $("appver").textContent = `アプリの版：${APP_VERSION}`;
+
 // すべてのファイル（sponsors.js・homecheck.js）を読み終えてから始める
 const ready = document.readyState === "loading" ? new Promise(r => document.addEventListener("DOMContentLoaded", r)) : Promise.resolve();
 Promise.all([
@@ -430,4 +433,12 @@ Promise.all([
 ]).then(() => { createPins(); drawHome(); home(); track("open", 0); });
 
 // ---------- オフラインでも開けるようにする ----------
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+if ("serviceWorker" in navigator) {
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(r => r.update()).catch(() => {});
+  // 新しい版が届いたら、1回だけ自動で読み込み直す
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (hadController && !reloaded) { reloaded = true; location.reload(); }
+  });
+}
