@@ -184,7 +184,7 @@ function shelterClick(sh) {
     if (!(sh.m & bit)) {
       html += `<div class="verdict ng popguide"><img src="${POSE("surprise")}" alt="">ここは「${label}」のときには使えない避難場所だよ！避難場所は、災害の種類ごとに決められています。</div>`;
     } else if (rank > -1 && (rank < 5 || d <= ok[0].d + 1)) {
-      html += `<div class="verdict ok popguide"><img src="${POSE("banzai")}" alt="">ミッション成功！ ${label}のときに使える避難場所です（${s.name}から約${fmt(d)}）。+50pt</div>`;
+      html += `<div class="verdict ok popguide"><img src="${POSE("banzai")}" alt="">ミッション成功！ ${label}のときに使える避難場所です（${s.name}から約${fmt(d)}）。+50pt<br>実際に逃げるときは、近さだけでなく、川や海に近づかない道を選ぼう。</div>`;
       if (!state.mission[s.id]) { state.mission[s.id] = true; save(); }
       endMission(); openSpot(s.id, true);
     } else {
@@ -192,6 +192,16 @@ function shelterClick(sh) {
     }
   }
   L.popup({ maxWidth: 260 }).setLatLng([sh.lat, sh.lng]).setContent(html).openOn(map);
+}
+
+// ---------- 安全のための共通の表示 ----------
+const MOVING_KMH = 15; // これより速く移動しているときはチェックインできない（歩きスマホ・運転中の操作を防ぐ）
+const moving = () => !!me && me.kmh > MOVING_KMH;
+const SAFETY_NOTE = `<p class="safety">⚠ 大雨・津波・地震などの<b>警報や注意報が出ているときは、行かないでください</b>。川・海・用水路には近づかないこと。子どもは大人といっしょに。歩きスマホはやめよう。<a href="https://www.jma.go.jp/bosai/warning/#area_type=offices&area_code=160000" target="_blank" rel="noopener">富山県の警報・注意報（気象庁）</a></p>`;
+// 近くまで来ているのに移動中のとき
+function movingNote(lat, lng, radius) {
+  if (!moving() || km(me.lat, me.lng, lat, lng) * 1000 > radius + Math.min(me.acc, 100)) return "";
+  return `<div class="box checkin">${guide("surprise", `移動中はチェックインできないよ（時速 約${Math.round(me.kmh)}km）。安全な場所で立ち止まってから、もう一度ためしてね。`, "small")}</div>`;
 }
 
 // ---------- GPS（現在地） ----------
@@ -226,7 +236,15 @@ function stopGps() {
   rerender();
 }
 function onPos(p) {
-  me = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy };
+  const prev = me;
+  me = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy, t: p.timestamp || Date.now() };
+  // 移動の速さ（km/h）：スマホが教えてくれればそれを、なければ前の位置との差から計算
+  let kmh = (p.coords.speed != null && p.coords.speed >= 0) ? p.coords.speed * 3.6 : null;
+  if (kmh === null && prev && prev.t) {
+    const dt = (me.t - prev.t) / 1000;
+    kmh = dt >= 2 ? km(prev.lat, prev.lng, me.lat, me.lng) / (dt / 3600) : prev.kmh;
+  }
+  me.kmh = kmh || 0;
   if (!meMarker) {
     meCircle = L.circle([me.lat, me.lng], { radius: me.acc, color: "#1a73e8", weight: 1, fillOpacity: .1 }).addTo(map);
     meMarker = L.marker([me.lat, me.lng], { icon: meIcon(), zIndexOffset: 2000, title: "いまいる場所" }).addTo(map);
@@ -251,7 +269,7 @@ function nearestSpot() {
 function canCheckIn(s) {
   if (!me) return false;
   const d = km(me.lat, me.lng, s.lat, s.lng) * 1000;
-  return d <= CHECKIN_RADIUS_M + Math.min(me.acc, 100) && me.acc <= 200;
+  return d <= CHECKIN_RADIUS_M + Math.min(me.acc, 100) && me.acc <= 200 && !moving();
 }
 
 // ---------- 近くの避難場所 ----------
@@ -312,7 +330,8 @@ function refresh(sel) {
 function home() {
   current = null; currentSponsor = null; refresh(0);
   const p = total(), next = RANKS.find(r => r[0] > p);
-  $("panel").innerHTML = `${csvWarning()}${guide("peek", "いっしょに防災ポイントをめぐろう！")}
+  $("panel").innerHTML = `${csvWarning()}<div class="official"><b>このアプリは民間の防災学習アプリです。</b>県や市町村の公式アプリではありません。災害のときは、市町村からの避難情報やテレビ・ラジオを確かめてください。<br><a href="https://www.jma.go.jp/bosai/" target="_blank" rel="noopener">気象庁の防災情報</a> ・ <a href="https://disaportal.gsi.go.jp/" target="_blank" rel="noopener">重ねるハザードマップ</a></div>
+    ${guide("peek", "いっしょに防災ポイントをめぐろう！")}
     <div class="box home-cta"><b class="t">🏠 わが家</b><span>${state.home ? "わが家の浸水の深さや、近くの避難場所を確かめよう。" : "自宅を登録すると、わが家の危険と近くの避難場所がわかります（+50pt）。"}</span><div><button class="btn green" id="homebtn2">${state.home ? "わが家のハザードチェック" : "自宅を登録する"}</button></div></div><div class="intro"><span class="tag">あそびかた</span>
     <ol><li>地図の番号をタップして、防災ポイントを開こう</li><li>説明を読んでクイズに答えると、スタンプがもらえるよ</li><li>ミッションで、近くの避難場所を地図からさがそう</li><li>実際にその場所へ行って「現地チェックイン」すると、金のスタンプと +100pt！</li></ol></div>
     <div><span class="tag">いまの称号</span><p class="rank">${rankOf(p)}</p><p class="note">${next ? `あと ${next[0] - p}pt で「${next[1]}」` : "すべての称号を手に入れました！"}</p></div>
@@ -329,11 +348,16 @@ function home() {
 }
 
 function checkinBox(s) {
+  if (state.here[s.id]) return checkinBoxInner(s);
+  if (me) { const mv = movingNote(s.lat, s.lng, CHECKIN_RADIUS_M); if (mv) return mv + SAFETY_NOTE; }
+  return checkinBoxInner(s) + SAFETY_NOTE;
+}
+function checkinBoxInner(s) {
   if (state.here[s.id]) return `<div class="box checkin clear"><b class="t">現地チェックイン済み +100pt</b><span>実際に来て、自分の目で確かめました。まわりの地形や、避難場所までの道も見ておこう。</span></div>`;
   if (!me) return `<div class="box checkin"><b class="t">現地チェックイン +100pt</b>${guide("sleep", "現在地がオフだと眠っちゃう…。この場所に実際に行くと、金のスタンプがもらえるよ。", "small")}<div><button class="btn gold" id="gpson">📍 現在地をオンにする</button></div></div>`;
   const d = km(me.lat, me.lng, s.lat, s.lng);
   if (canCheckIn(s)) return `<div class="box checkin">${guide("surprise", "着いたよ！チェックインしよう！", "small")}<div><button class="btn gold" id="doci">現地チェックインする</button></div></div>`;
-  return `<div class="box checkin"><b class="t">現地チェックイン +100pt</b><span>ここから約${fmt(d)}。ポイントから${CHECKIN_RADIUS_M}m以内に近づくとチェックインできます。</span><span class="note">移動するときは、まわりの安全に気をつけて。歩きスマホはやめよう。</span></div>`;
+  return `<div class="box checkin"><b class="t">現地チェックイン +100pt</b><span>ここから約${fmt(d)}。ポイントから${CHECKIN_RADIUS_M}m以内に近づくとチェックインできます。</span></div>`;
 }
 
 function openSpot(id, keepView) {

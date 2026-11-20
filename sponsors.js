@@ -102,7 +102,7 @@ function renderSponsorList(sel) {
 function canCheckInSponsor(p) {
   if (!me) return false;
   const d = km(me.lat, me.lng, p.lat, p.lng) * 1000;
-  return d <= SPONSOR_RADIUS_M + Math.min(me.acc, 100) && me.acc <= 200;
+  return d <= SPONSOR_RADIUS_M + Math.min(me.acc, 100) && me.acc <= 200 && !moving();
 }
 const fmtTime = ts => { const d = new Date(ts); return `${d.getMonth() + 1}月${d.getDate()}日 ${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`; };
 
@@ -166,7 +166,7 @@ function openSponsor(id, keepView) {
     <h2>${sampleBreak(p.name)}</h2>${p.company ? `<p class="place">${sampleBreak(p.company)}</p>` : ""}
     ${p.img ? `<img class="spimg" src="${esc(p.img)}" alt="${p.name}">` : ""}
     ${p.text ? `<div class="learn"><p>${p.text}</p></div>` : ""}
-    <div id="cpbox">${couponBox(p)}</div>
+    <div id="cpbox">${me && !state.coupon[p.id] ? movingNote(p.lat, p.lng, SPONSOR_RADIUS_M) : ""}${couponBox(p)}</div>
     ${info.length ? `<div class="spinfo">${info.map(t => `<span>${t}</span>`).join("")}</div>` : ""}
     ${p.url ? `<div><a class="btn ghost" id="splink" href="${esc(p.url)}" target="_blank" rel="noopener sponsored">ウェブサイトを見る</a></div>` : ""}
     <p class="note">このスポットは、アプリを応援してくれている協賛企業の紹介（広告）です。避難場所ではありません。</p>

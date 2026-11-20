@@ -182,11 +182,12 @@ async function openHome() {
   ];
   const risky = rows.some(x => x[2] > 0);
   const deep = (r.flood && r.flood[2] >= 2) || (r.tsunami && r.tsunami[2] >= 4) || r.dosha.some(d => d.special);
-  const say = !risky ? "大きな危険は想定されていないよ。でも、地震や大雨にはいつでも備えておこう！"
+  const say = !risky ? "このハザードマップでは、大きな危険は想定されていないよ。でも「想定なし」は「安全」という意味じゃないよ！"
     : deep ? "わが家は危険な場所にあるかもしれないよ！早めの避難を家族で決めておこう。"
     : "わが家にも危険が想定されているよ。いざというときの動き方を確かめておこう。";
   $("hzres").innerHTML = `${guide(!risky ? "stand" : "surprise", say)}
     <div class="hztable">${rows.map(([k, v, lv]) => `<div class="hrow ${lv ? "warn" : ""}"><span class="hk">${k}</span><span>${v}</span></div>`).join("")}</div>
+    <div class="nosafe"><b>「想定なし」「区域外」は、安全という意味ではありません。</b>用水路や下水があふれる浸水（内水氾濫）や、想定をこえる大雨・地震は、ここに出ていなくても起こります。市町村から避難の情報が出たら、それに従ってください。</div>
     ${r.flood && r.flood[2] >= 2 ? '<p class="note">浸水0.5mは大人のひざ、3mは2階の床くらいの深さです。家の2階以上に逃げても助からない深さのときは、早めに避難場所へ。</p>' : ""}
     <p class="note">国土地理院ハザードマップポータルの「想定最大規模」の想定を、登録した地点で読み取った結果です。家屋が流される区域などは含みません。くわしくは市町村のハザードマップで確かめてください。</p>`;
   if (!state.homeCheck) { state.homeCheck = true; save(); refresh(0); toast("banzai", "わが家チェック達成！ +50pt"); }

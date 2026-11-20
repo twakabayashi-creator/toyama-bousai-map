@@ -193,3 +193,10 @@ a.btn{display:inline-block;text-decoration:none}
 .sample{display:block;font-size:.8em;font-weight:700;color:var(--muted);letter-spacing:.02em}
 h2 .sample{font-family:var(--body);font-size:13px;margin-bottom:2px}
 .splist .spst{color:var(--pr);font-weight:700;margin-top:2px}
+
+/* ---------- 安全のための表示 ---------- */
+.safety{margin:0;font-size:13px;line-height:1.7;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--ng) 8%,var(--surface));border:1.5px solid color-mix(in srgb,var(--ng) 35%,var(--surface))}
+.safety b{color:var(--ng)}
+.official{font-size:13px;line-height:1.7;padding:10px 12px;border-radius:10px;border:2px solid var(--ink);background:var(--bg)}
+.nosafe{font-size:14px;line-height:1.7;padding:12px 14px;border-radius:12px;background:color-mix(in srgb,var(--ng) 8%,var(--surface));border:2px solid var(--ng)}
+.nosafe b{color:var(--ng)}
